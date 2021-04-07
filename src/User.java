@@ -13,7 +13,7 @@ public class User implements Serializable
 
     private String userName;
     private String password;
-    private final LocalDateTime dateJoined;
+    private LocalDateTime dateJoined;
 
     //optional data
 
@@ -25,15 +25,16 @@ public class User implements Serializable
 
     //user activity
 
-    private final ArrayList<Tweet> tweets;
-    private final ArrayList<Tweet> tweetsAndReplies;
-    private final ArrayList<Tweet> likedTweets;
-    private final ArrayList<Tweet> retweets;
+    private ArrayList<Tweet> tweets;
+    private ArrayList<Tweet> tweetsAndReplies;
+    private ArrayList<Tweet> likedTweets;
+    private ArrayList<Tweet> retweets;
     //the tweets in which this user is mentioned
-    private final ArrayList<Tweet> mentionedIn;
-    private final ArrayList<User> followers;
-    private final ArrayList<User> following;
-    private final ArrayList<User> blockedUsers;
+    private ArrayList<Tweet> mentionedIn;
+    private ArrayList<User> followers;
+    private ArrayList<User> following;
+    private ArrayList<User> blockedUsers;
+    private ArrayList<User> blockedBy;
     //the tweets in the timeline of this user
     private ArrayList<Tweet> timelineTweets;
     //this user is deleted or not
@@ -62,6 +63,8 @@ public class User implements Serializable
         followers = new ArrayList<>();
         following = new ArrayList<>();
         blockedUsers = new ArrayList<>();
+        blockedBy = new ArrayList<>();
+
 
         isDeleted = false;
     }
@@ -73,7 +76,7 @@ public class User implements Serializable
 
     public void showMentionedIn()
     {
-        if(this.mentionedIn.isEmpty())
+        if (this.mentionedIn.isEmpty())
         {
             return;
         }
@@ -82,9 +85,9 @@ public class User implements Serializable
         System.out.println("you have been mentioned in the following tweet(s).");
         int i = 1;
 
-        for(Tweet tweet : mentionedIn)
+        for (Tweet tweet : mentionedIn)
         {
-            System.out.println(i + ") ");
+            System.out.println(i + ")");
             System.out.println(tweet);
             i++;
         }
@@ -101,7 +104,7 @@ public class User implements Serializable
         if (tweet.getInReplyTo() != null)
         {
             //add the tweet to the replied tweet's 'replies' array list
-            tweet.getInReplyTo().addReply(tweet);
+            tweet.getInReplyTo().addAReply(tweet);
         }
 
         //this tweet is not a reply
@@ -133,7 +136,7 @@ public class User implements Serializable
         if (this.retweets.contains(tweet))
         {
             this.retweets.remove(tweet);
-            tweet.removeRetweet(this);
+            tweet.removeRetweeter(this);
             System.out.println("you have unretweeted the following tweet.");
             System.out.println(tweet);
         }
@@ -141,18 +144,10 @@ public class User implements Serializable
         //the user wants to retweet the tweet
         else
         {
-            //the user is blocked by this tweet's user
-            if (tweet.getUser().hasBlocked(this))
-            {
-                System.out.println(tweet.getUser().getUsername() + " has blocked you, so you cannot retweet" +
-                        " any of their tweets.");
-            } else
-            {
-                this.retweets.add(tweet);
-                tweet.addRetweet(this);
-                System.out.println("you have retweeted the following tweet.");
-                System.out.println(tweet);
-            }
+            this.retweets.add(tweet);
+            tweet.addRetweeter(this);
+            System.out.println("you have retweeted the following tweet.");
+            System.out.println(tweet);
         }
     }
 
@@ -164,7 +159,7 @@ public class User implements Serializable
             //remove this tweet from the liked tweets arraylist
             this.likedTweets.remove(tweet);
             //remove the user from this tweet's likes array list
-            tweet.removeLike(this);
+            tweet.removeLiker(this);
             System.out.println("you have unliked the following tweet.");
         }
 
@@ -174,7 +169,7 @@ public class User implements Serializable
             //add this tweet to the liked tweets arraylist
             this.likedTweets.add(tweet);
             //add the user to this tweet's likes array list
-            tweet.addLike(this);
+            tweet.addLiker(this);
             System.out.println("you have liked the following tweet.");
         }
         System.out.println(tweet);
@@ -186,7 +181,6 @@ public class User implements Serializable
         this.tweets.remove(tweet);
         this.tweetsAndReplies.remove(tweet);
         this.likedTweets.remove(tweet);
-        this.timelineTweets.remove(tweet);
         this.mentionedIn.remove(tweet);
         this.retweets.remove(tweet);
 
@@ -230,6 +224,8 @@ public class User implements Serializable
         {
             //remove this user from the active user's blocked users list
             this.blockedUsers.remove(user);
+            //remove the active user from this user's blockedby list
+            user.removeFromBlockedBy(this);
             System.out.println("you have unblocked " + user.getUsername() + ".");
         }
 
@@ -238,7 +234,8 @@ public class User implements Serializable
         {
             //add this user to the active user's blocked list
             this.blockedUsers.add(user);
-
+            //add the active user to this user's blockedby list
+            user.addToBlockedBy(this);
             //remove this two users from each other's following and follower list
             this.following.remove(user);
             this.followers.remove(user);
@@ -257,6 +254,7 @@ public class User implements Serializable
     public void deactivateMyAccount()
     {
         isDeleted = true;
+
         //remove the user from all of their followers' followings list
         for (User follower : followers)
         {
@@ -268,6 +266,51 @@ public class User implements Serializable
         {
             following.removeFollower(this);
         }
+
+        //delete all of this user's tweets
+        for (Tweet tweet : tweetsAndReplies)
+        {
+            tweet.delete();
+        }
+
+        //remove this user from the tweets that
+        //had mentioned him/her
+        for (Tweet tweet : mentionedIn)
+        {
+            tweet.removeFromMentions(this);
+        }
+
+        //remove this user from the likers list of the tweets
+        //that he/she had liked
+        for (Tweet tweet : likedTweets)
+        {
+            tweet.removeLiker(this);
+        }
+
+        //remove this user from the retweeters list of the tweets
+        //that he/she has retweeted
+        for (Tweet tweet : retweets)
+        {
+            tweet.removeRetweeter(this);
+        }
+
+        //remove this user from the blockedusers list
+        //of the users in his/her blockedby list
+        for (User user : blockedBy)
+        {
+            user.removeFromBlockedBy(this);
+        }
+
+        //clear every one of this user's arraylists
+        tweets.clear();
+        tweetsAndReplies.clear();
+        likedTweets.clear();
+        retweets.clear();
+        mentionedIn.clear();
+        followers.clear();
+        following.clear();
+        blockedUsers.clear();
+        blockedBy.clear();
     }
 
     /*helper methods*/
@@ -277,7 +320,10 @@ public class User implements Serializable
         this.mentionedIn.add(tweet);
     }
 
-    public void removeFromMentionedIn(Tweet tweet) {this.mentionedIn.remove(tweet);}
+    public void removeFromMentionedIn(Tweet tweet)
+    {
+        this.mentionedIn.remove(tweet);
+    }
 
     public boolean hasBlocked(User user)
     {
@@ -286,7 +332,6 @@ public class User implements Serializable
 
     private void fillTimeline()
     {
-        //initialize the timeline tweets arraylist
         timelineTweets = new ArrayList<>();
 
         //add all of this user's tweets to the timeline
@@ -331,9 +376,24 @@ public class User implements Serializable
         this.followers.add(user);
     }
 
-    public boolean checkDeleted()
+    public void removeALike(Tweet tweet)
     {
-        return isDeleted;
+        this.likedTweets.remove(tweet);
+    }
+
+    public void removeARetweet(Tweet tweet)
+    {
+        this.retweets.remove(tweet);
+    }
+
+    public void addToBlockedBy(User user)
+    {
+        this.blockedBy.add(user);
+    }
+
+    public void removeFromBlockedBy(User user)
+    {
+        this.blockedBy.remove(user);
     }
 
     //getters & setters
@@ -353,20 +413,14 @@ public class User implements Serializable
         return password;
     }
 
-    public String getName(){return name;}
-
-    public String getPhoneNumber(){return phoneNumber;}
-
-    public String getEmail(){return email;}
-
-    public void setUserName(String userName)
-    {
-        this.userName = userName;
-    }
-
     public void setPassword(String password)
     {
         this.password = password;
+    }
+
+    public String getName()
+    {
+        return name;
     }
 
     public void setName(String name)
@@ -374,14 +428,29 @@ public class User implements Serializable
         this.name = name;
     }
 
-    public void setEmail(String email)
+    public String getPhoneNumber()
     {
-        this.email = email;
+        return phoneNumber;
     }
 
     public void setPhoneNumber(String phoneNumber)
     {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmail()
+    {
+        return email;
+    }
+
+    public void setEmail(String email)
+    {
+        this.email = email;
+    }
+
+    public void setUserName(String userName)
+    {
+        this.userName = userName;
     }
 
     public void setLocation(String location)
@@ -419,22 +488,20 @@ public class User implements Serializable
         //display every tweet
         result.append("\n\ntweets: ");
 
-        if(tweets.isEmpty())
+        if (tweets.isEmpty())
         {
             result.append("[]");
-        }
-
-        else
+        } else
         {
             result.append("\n\n");
             i = 1;
             for (Tweet tweet : tweets)
             {
-                if(retweets.contains(tweet) && tweet.getUser() != this)
+                if (retweets.contains(tweet) && tweet.getUser() != this)
                 {
                     result.append("(").append(userName).append(" Retweeted) ");
                 }
-                result.append(i).append(") ").append(tweet).append("\n");
+                result.append(i).append(")\n").append(tweet).append("\n");
                 i++;
             }
         }
@@ -442,18 +509,16 @@ public class User implements Serializable
         //display every tweet and reply
         result.append("\ntweets and replies: ");
 
-        if(tweetsAndReplies.isEmpty())
+        if (tweetsAndReplies.isEmpty())
         {
             result.append("[]");
-        }
-
-        else
+        } else
         {
             result.append("\n\n");
             i = 1;
             for (Tweet tweet : tweetsAndReplies)
             {
-                result.append(i).append(") ").append(tweet).append("\n");
+                result.append(i).append(")\n").append(tweet).append("\n");
                 i++;
             }
         }
@@ -462,18 +527,16 @@ public class User implements Serializable
         //display every follower
         result.append("\nfollowers: ");
 
-        if(followers.isEmpty())
+        if (followers.isEmpty())
         {
             result.append("[]");
-        }
-
-        else
+        } else
         {
             result.append("\n\n");
             i = 1;
             for (User user : followers)
             {
-                result.append(i).append(") ").append(user.getUsername()).append("\n");
+                result.append(i).append(")\n").append(user.getUsername()).append("\n");
                 i++;
             }
         }
@@ -481,18 +544,16 @@ public class User implements Serializable
         //display every following
         result.append("\nfollowing: ");
 
-        if(following.isEmpty())
+        if (following.isEmpty())
         {
             result.append("[]");
-        }
-
-        else
+        } else
         {
             result.append("\n\n");
             i = 1;
             for (User user : following)
             {
-                result.append(i).append(") ").append(user.getUsername()).append("\n");
+                result.append(i).append(")\n").append(user.getUsername()).append("\n");
                 i++;
             }
         }
@@ -500,18 +561,16 @@ public class User implements Serializable
         //display every blocked user
         result.append("\nblocked users: ");
 
-        if(blockedUsers.isEmpty())
+        if (blockedUsers.isEmpty())
         {
             result.append("[]");
-        }
-
-        else
+        } else
         {
             result.append("\n\n");
             i = 1;
             for (User user : blockedUsers)
             {
-                result.append(i).append(") ").append(user.getUsername()).append("\n");
+                result.append(i).append(")\n").append(user.getUsername()).append("\n");
                 i++;
             }
         }

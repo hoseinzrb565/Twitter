@@ -44,7 +44,7 @@ public class Twitter
     private ArrayList<Tweet> existingTweets;
     //arraylist containing available commands
     //at any given moment throughout the application
-    private ArrayList<String> commands = new ArrayList<>();
+    private ArrayList<String> commands;
     //stores the last input of the user
     private String input;
     //stores the status of the application
@@ -55,7 +55,7 @@ public class Twitter
     /*helper variables*/
 
     //scanner object
-    private Scanner jin = new Scanner(System.in);
+    private Scanner jin;
 
 
     /*methods*/
@@ -72,10 +72,11 @@ public class Twitter
     private void mainMenu()
     {
         //update the status of the application
+        commands = new ArrayList<>();
+        jin = new Scanner(System.in);
         activeUser = null;
         input = "";
         status = "main menu";
-        commands.clear();
         commands.add("log in");
         commands.add("sign up");
         commands.add("quit the application");
@@ -272,7 +273,10 @@ public class Twitter
                     || input.contains(" ") || input.length() > USER_NAME_MAX_LENGTH)
             {
                 System.out.println("error: invalid input.");
-            } else if (findUser(input) != null)
+            }
+
+            //user not found
+            else if (findUser(input) != null)
             {
                 System.out.println("error: username already taken.");
             } else
@@ -330,10 +334,9 @@ public class Twitter
                             "does not match with the original.");
                 }
             }
-
         } while (true);
 
-        //make a new user and assign the active user to it
+        //make a new user and assign it to the active user
         activeUser = new User(userName, password, LocalDateTime.now());
         //add this user to the existing users arraylist and save the changes
         existingUsers.add(activeUser);
@@ -350,11 +353,12 @@ public class Twitter
         status = "home";
         commands.clear();
         commands.add("new tweet");
-        commands.add("retweet/unretweet a tweet");
-        commands.add("like/unlike a tweet");
+        commands.add("(un)retweet a tweet");
+        commands.add("(un)like a tweet");
         commands.add("delete a tweet");
-        commands.add("follow/unfollow a user");
-        commands.add("block/unblock a user");
+        commands.add("view a tweet");
+        commands.add("(un)follow a user");
+        commands.add("(un)block a user");
         commands.add("view the timeline");
         commands.add("view and edit my profile");
         commands.add("view a user's profile");
@@ -369,6 +373,7 @@ public class Twitter
         System.out.println("hi " + activeUser.getUsername() + "!");
 
         activeUser.showMentionedIn();
+        save();
 
         commands.clear();
         commands.add("return home");
@@ -388,11 +393,11 @@ public class Twitter
                     newTweetMenu();
                     return;
 
-                case "retweet/unretweet a tweet":
+                case "(un)retweet a tweet":
                     retweetOrUnretweetATweetMenu();
                     return;
 
-                case "like/unlike a tweet":
+                case "(un)like a tweet":
                     likeOrUnlikeATweetMenu();
                     return;
 
@@ -400,11 +405,15 @@ public class Twitter
                     deleteATweetMenu();
                     return;
 
-                case "follow/unfollow a user":
+                case "view a tweet":
+                    viewATweetMenu();
+                    return;
+
+                case "(un)follow a user":
                     followOrUnfollowAUserMenu();
                     return;
 
-                case "block/unblock a user":
+                case "(un)block a user":
                     blockOrUnblockAUserMenu();
                     return;
 
@@ -433,10 +442,9 @@ public class Twitter
                     return;
 
                 default:
+                    System.out.println("error: invalid input.");
                     break;
             }
-
-            System.out.println("error: invalid input.");
         } while (true);
     }
 
@@ -481,7 +489,7 @@ public class Twitter
             {
                 input = jin.nextLine();
 
-                //check if input is a command
+                //check if the input is a command
                 switch (input.trim().toLowerCase())
                 {
                     //the input is a command
@@ -548,7 +556,7 @@ public class Twitter
                         "if there is nobody else, enter '-1'.");
                 input = jin.nextLine();
 
-                //check if input is a command
+                //check if the input is a command
                 switch (input.trim().toLowerCase())
                 {
                     //the input is a command
@@ -615,6 +623,7 @@ public class Twitter
             } while (true);
         }
 
+        //make a new tweet
         System.out.println("what's on your mind?\nmy attention span isn't " +
                 "great, so keep it under " + TWEET_MAX_LENGTH + " characters." +
                 " enter '-1' to go back.");
@@ -667,7 +676,7 @@ public class Twitter
                 //add the tweet to the existing tweets arraylist
                 existingTweets.add(tweet);
 
-                //save the changes
+                //save changes
                 save();
 
                 //return to home page
@@ -681,18 +690,18 @@ public class Twitter
     {
         //update the status of the application
         input = "";
-        status = "retweet/unretweet menu";
+        status = "(un)retweet menu";
         showStatus();
         printCommands();
 
         System.out.println("enter the ID of the tweet you want to" +
-                " tweet/unretweet.");
+                " (un)retweet.");
 
         do
         {
             input = jin.nextLine();
 
-            //check if input is a command
+            //check if the input is a command
             switch (input.trim().toLowerCase())
             {
                 //the input is a command
@@ -750,18 +759,18 @@ public class Twitter
     {
         //update the status of the application
         input = "";
-        status = "like/unlike a tweet menu";
+        status = "(un)like a tweet menu";
         showStatus();
         printCommands();
 
         System.out.println("enter the ID of the tweet you want to" +
-                " like/unlike.");
+                " (un)like.");
 
         do
         {
             input = jin.nextLine();
 
-            //check if input is a command
+            //check if the input is a command
             switch (input.trim().toLowerCase())
             {
                 //the input is a command
@@ -801,7 +810,7 @@ public class Twitter
                             " has blocked you, so you cannot (un)like any of their tweets.");
                 } else
                 {
-                    //make the (un)retweet
+                    //make the (un)like
                     activeUser.likeOrUnlikeATweet(tweet);
 
                     //save changes
@@ -878,6 +887,7 @@ public class Twitter
                     {
                         //delete the tweet
                         activeUser.deleteATweet(tweet);
+                        existingTweets.remove(tweet);
 
                         //save changes
                         save();
@@ -891,16 +901,77 @@ public class Twitter
         } while (true);
     }
 
+    private void viewATweetMenu()
+    {
+        //update the status of the application
+        input = "";
+        status = "view a tweet menu";
+        showStatus();
+        printCommands();
+
+        System.out.println("enter the ID of the tweet you want to" +
+                " view. enter '-1' to go back.");
+
+        do
+        {
+            input = jin.nextLine();
+
+            //check if the input is a command
+            switch (input.trim().toLowerCase())
+            {
+                //the input is a command
+                case "return home":
+                    activeUserHomePage();
+                    return;
+                case "quit the application":
+                    quitMenu();
+                    return;
+
+                //the input is not a command
+                default:
+                    break;
+            }
+
+            //input is not valid
+            if (!(input.matches("\\d+")))
+            {
+                System.out.println("error: invalid input.");
+            }
+
+            //the input is valid
+            else
+            {
+                Tweet tweet = findTweet(input);
+
+                //tweet not found
+                if (tweet == null)
+                {
+                    System.out.println("error: tweet not found.");
+                }
+
+                //the active user is blocked by the tweet's user
+                else if (tweet.getUser().hasBlocked(activeUser))
+                {
+                    System.out.println("error: " + tweet.getUser().getUsername() +
+                            " has blocked you, so you cannot view any of their tweets.");
+                } else
+                {
+                    System.out.println(tweet);
+                }
+            }
+        } while (true);
+    }
+
     private void followOrUnfollowAUserMenu()
     {
         //update the status of the application
         input = "";
-        status = "follow/unfollow a user menu";
+        status = "(un)follow a user menu";
         showStatus();
         printCommands();
 
         System.out.println("enter the username of the user you want to " +
-                "follow/unfollow.");
+                "(un)follow.");
 
         do
         {
@@ -1023,10 +1094,7 @@ public class Twitter
                 } else if (user == activeUser)
                 {
                     System.out.println("error: you cannot block yourself.");
-                }
-
-                //found the user
-                else
+                } else
                 {
                     //make the (un)block
                     activeUser.blockOrUnblockAUser(user);
@@ -1104,14 +1172,14 @@ public class Twitter
                         }
 
                         //the user wants to change their username
-                        //the input is invalid
+                        //the input is not valid
                         if (input.equals("") || input.charAt(0) != '@'
                                 || input.contains(" ") || input.length() > USER_NAME_MAX_LENGTH)
                         {
                             System.out.println("error: invalid input.");
                         }
 
-                        //the username is not neww.
+                        //the username is not new.
                         else if (activeUser.getUsername().equals(input))
                         {
                             System.out.println("error: " + input + " is your current username.");
@@ -1126,7 +1194,9 @@ public class Twitter
                         //the username is available
                         else
                         {
+                            //change the user name
                             activeUser.setUserName(input);
+                            //save changes
                             save();
                             System.out.println("you have changed your username to " + input + ".");
                             System.out.println("press enter to go back.");
@@ -1153,7 +1223,7 @@ public class Twitter
                         }
 
                         //the user wants to change their password
-                        //the input is invalid
+                        //the input is not valid
                         if (input.length() < PASSWORD_MIN_LENGTH)
                         {
                             System.out.println("error: invalid input.");
@@ -1168,12 +1238,15 @@ public class Twitter
                             System.out.println("confirm password:");
                             if (jin.nextLine().equals(input))
                             {
+                                //change the password
                                 activeUser.setPassword(input);
+                                //save changes
                                 save();
                                 System.out.println("you have changed your password.");
                                 System.out.println("press enter to go back.");
                                 jin.nextLine();
                                 viewAndEditMyProfileMenu();
+                                return;
                             }
 
                             //the conformation password does not match with the original
@@ -1201,7 +1274,7 @@ public class Twitter
                         }
 
                         //the user wants to change their name
-                        //the input is invalid
+                        //the input is not valid
                         if (input.length() > NAME_MAX_LENGTH)
                         {
                             System.out.println("error: invalid input.");
@@ -1210,16 +1283,19 @@ public class Twitter
                         //the name is not new
                         else if (activeUser.getName().equals(input))
                         {
-                            System.out.println("error: " + input + " is your current name.");
+                            System.out.println("error: '" + input + "' is your current name.");
                         } else
                         {
+                            //change the name
                             activeUser.setName(input);
+                            //save changes
                             save();
                             System.out.println("you have changed your name to " + input +
                                     ".");
                             System.out.println("press enter to go back.");
                             jin.nextLine();
                             viewAndEditMyProfileMenu();
+                            return;
                         }
                     } while (true);
 
@@ -1264,13 +1340,16 @@ public class Twitter
                             System.out.println("error: this email is taken.");
                         } else
                         {
+                            //change the email
                             activeUser.setEmail(input);
+                            //save changes
                             save();
                             System.out.println("you have changed your email to " + input +
                                     ".");
                             System.out.println("press enter to go back.");
                             jin.nextLine();
                             viewAndEditMyProfileMenu();
+                            return;
                         }
                     } while (true);
 
@@ -1307,17 +1386,20 @@ public class Twitter
                                 System.out.println("error: this phone number is taken.");
                             } else
                             {
+                                //change the phone number
                                 activeUser.setPhoneNumber(input);
+                                //save changes
                                 save();
                                 System.out.println("you have changed your phone number to " + input +
                                         ".");
                                 System.out.println("press enter to go back.");
                                 jin.nextLine();
                                 viewAndEditMyProfileMenu();
+                                return;
                             }
                         }
 
-                        //the phone number is invalid
+                        //the phone number is not valid
                         else
                         {
                             System.out.println("error: invalid input.");
@@ -1350,13 +1432,16 @@ public class Twitter
                         //the input is valid
                         else
                         {
+                            //change the location
                             activeUser.setLocation(input);
+                            //save changes
                             save();
                             System.out.println("you have changed your location to '" + input +
                                     "'.");
                             System.out.println("press enter to go back.");
                             jin.nextLine();
                             viewAndEditMyProfileMenu();
+                            return;
                         }
                     } while (true);
 
@@ -1377,7 +1462,7 @@ public class Twitter
                         }
 
                         //the user wants to change their bio
-                        //the input is invalid
+                        //the input is not valid
                         if (input.length() > BIO_MAX_LENGTH)
                         {
                             System.out.println("error: invalid input.");
@@ -1386,13 +1471,16 @@ public class Twitter
                         //the input is valid
                         else
                         {
+                            //change the bio
                             activeUser.setBio(input);
+                            //save changes
                             save();
                             System.out.println("you have changed your bio to '" + input +
                                     "'.");
                             System.out.println("press enter to go back.");
                             jin.nextLine();
                             viewAndEditMyProfileMenu();
+                            return;
                         }
                     } while (true);
 
@@ -1421,7 +1509,7 @@ public class Twitter
         {
             input = jin.nextLine();
 
-            //check if input is a command
+            //check if the input is a command
             switch (input.trim().toLowerCase())
             {
                 //the input is a command
@@ -1494,9 +1582,10 @@ public class Twitter
     {
         System.out.println("are you sure you want to deactivate your" +
                 " account?\nthis action cannot be undone." +
-                " enter 'yes' for yes or press enter to return to your" +
+                " enter 'I want to deactivate my account' for yes" +
+                " or press enter to return to your" +
                 " home page.");
-        if (jin.nextLine().trim().equalsIgnoreCase("yes"))
+        if (jin.nextLine().trim().equalsIgnoreCase("I want to deactivate my account"))
         {
             System.out.println("enter your password. enter '-1' to go back.");
 
@@ -1516,13 +1605,7 @@ public class Twitter
                     {
                         //delete the user
                         existingUsers.remove(activeUser);
-                        for (Tweet tweet : existingTweets)
-                        {
-                            if (tweet.getUser() == activeUser)
-                            {
-                                existingTweets.remove(tweet);
-                            }
-                        }
+                        existingTweets.removeIf(tweet -> tweet.getUser() == activeUser);
                         activeUser.deactivateMyAccount();
 
                         //save changes
@@ -1597,15 +1680,16 @@ public class Twitter
         existingTweets = new ArrayList<>();
         existingUsers = new ArrayList<>();
 
-        //set up the reader
+        //set up the file and the reader
         try
         {
             file = new File("users.ser");
+            //the next line will create the file if it doesn't already exist
             file.createNewFile();
             reader = new ObjectInputStream(new FileInputStream(file));
         } catch (Exception e)
         {
-            if(e instanceof EOFException)
+            if (e instanceof EOFException)
             {
                 return;
             }
@@ -1619,6 +1703,7 @@ public class Twitter
         {
             try
             {
+                System.out.println(reader.readObject().getClass().getName());
                 User user = (User) reader.readObject();
                 if (user != null)
                 {
